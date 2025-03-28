@@ -25,6 +25,10 @@ export class SnippetManager {
     return this.storage.get<Snippet[]>(SnippetManager.STORAGE_KEY, []);
   }
   
+  public getSnippets(): Snippet[] {
+    return this.getAllSnippets();
+  }
+  
   public getSnippet(id: string): Snippet | undefined {
     const snippets = this.getAllSnippets();
     return snippets.find(snippet => snippet.id === id);

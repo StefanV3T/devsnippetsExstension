@@ -11,6 +11,9 @@ class SnippetManager {
     getAllSnippets() {
         return this.storage.get(SnippetManager.STORAGE_KEY, []);
     }
+    getSnippets() {
+        return this.getAllSnippets();
+    }
     getSnippet(id) {
         const snippets = this.getAllSnippets();
         return snippets.find(snippet => snippet.id === id);

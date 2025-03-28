@@ -23,36 +23,54 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SnippetsProvider = exports.SnippetItem = void 0;
+exports.SnippetsProvider = exports.SnippetTreeItem = void 0;
 const vscode = __importStar(require("vscode"));
-class SnippetItem extends vscode.TreeItem {
-    snippet;
+// Tree item representing a snippet in the TreeView
+class SnippetTreeItem extends vscode.TreeItem {
+    label;
+    snippetId;
     collapsibleState;
-    constructor(snippet, collapsibleState) {
-        super(snippet.title, collapsibleState);
-        this.snippet = snippet;
+    language;
+    constructor(label, snippetId, collapsibleState, language) {
+        super(label, collapsibleState);
+        this.label = label;
+        this.snippetId = snippetId;
         this.collapsibleState = collapsibleState;
-        this.tooltip = snippet.description || snippet.title;
-        this.description = snippet.language;
+        this.language = language;
+        // Set additional properties
+        this.tooltip = label;
+        this.description = language;
         this.contextValue = 'snippet';
-        // Set icon based on language
-        this.iconPath = new vscode.ThemeIcon('code');
-        // Set command to execute when item is clicked
+        // Set the command that is executed when this tree item is clicked
         this.command = {
-            command: 'devsnippet.copySnippet',
-            title: 'Copy Snippet',
-            arguments: [snippet.id]
+            command: 'devsnippet.openSnippet',
+            title: 'Open Snippet',
+            arguments: [snippetId]
         };
+        // Set icon based on language if possible
+        this.iconPath = new vscode.ThemeIcon('code');
     }
 }
-exports.SnippetItem = SnippetItem;
+exports.SnippetTreeItem = SnippetTreeItem;
 class SnippetsProvider {
     snippetManager;
     _onDidChangeTreeData = new vscode.EventEmitter();
     onDidChangeTreeData = this._onDidChangeTreeData.event;
+    tagFilter = null;
     constructor(snippetManager) {
         this.snippetManager = snippetManager;
     }
+    // Method to set the tag filter
+    setTagFilter(tagName) {
+        this.tagFilter = tagName;
+        this.refresh();
+    }
+    // Method to clear the tag filter
+    clearTagFilter() {
+        this.tagFilter = null;
+        this.refresh();
+    }
+    // Refresh the tree view
     refresh() {
         this._onDidChangeTreeData.fire();
     }
@@ -61,16 +79,18 @@ class SnippetsProvider {
     }
     getChildren(element) {
         if (element) {
-            // If element is provided, we're looking for children of a snippet (which has none)
+            // If there's a parent element, this would handle nested items (if needed)
             return Promise.resolve([]);
         }
         else {
-            // Root level, show all snippets
-            const snippets = this.snippetManager.getAllSnippets();
-            if (snippets.length === 0) {
-                vscode.window.showInformationMessage('No snippets found. Create one by selecting code and using "DevSnippet: Create New Snippet"');
+            // Get all snippets from the snippet manager
+            let snippets = this.snippetManager.getSnippets();
+            // Filter snippets by tag if a tag filter is set
+            if (this.tagFilter) {
+                snippets = snippets.filter(snippet => snippet.tags.includes(this.tagFilter));
             }
-            return Promise.resolve(snippets.map(snippet => new SnippetItem(snippet, vscode.TreeItemCollapsibleState.None)));
+            // Convert snippets to tree items
+            return Promise.resolve(snippets.map(snippet => new SnippetTreeItem(snippet.title, snippet.id, vscode.TreeItemCollapsibleState.None, snippet.language)));
         }
     }
 }
