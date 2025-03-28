@@ -47,7 +47,98 @@ function activate(context) {
     vscode.window.registerTreeDataProvider('devsnippet.snippetsView', snippetsProvider);
     vscode.window.registerTreeDataProvider('devsnippet.tagsView', tagsProvider);
     // Register commands
-    context.subscriptions.push(providerRegistration, vscode.commands.registerCommand('devsnippet.clearTagFilter', () => {
+    context.subscriptions.push(providerRegistration, 
+    // Add this to your commands in the activate function
+    vscode.commands.registerCommand('devsnippet.createSnippetFromSelection', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor');
+            return;
+        }
+        const selection = editor.selection;
+        if (selection.isEmpty) {
+            vscode.window.showErrorMessage('No code selected');
+            return;
+        }
+        const selectedCode = editor.document.getText(selection);
+        const language = editor.document.languageId;
+        // Generate a title suggestion based on the first line or function name
+        let titleSuggestion = '';
+        const firstLine = selectedCode.split('\n')[0].trim();
+        // Try to extract a function or class name
+        const functionMatch = firstLine.match(/(?:function|class|def|const|let|var)\s+([a-zA-Z0-9_]+)/);
+        if (functionMatch && functionMatch[1]) {
+            titleSuggestion = functionMatch[1];
+        }
+        else {
+            titleSuggestion = "New snippet";
+        }
+        // Open snippet creation panel with the selected code
+        newSnippetPanel_1.NewSnippetPanel.createOrShow(context.extensionUri, snippetManager, {
+            title: titleSuggestion,
+            code: selectedCode,
+            language: language
+        });
+    }), vscode.commands.registerCommand('devsnippet.insertSnippetFromContext', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor');
+            return;
+        }
+        // Get all snippets
+        const allSnippets = snippetManager.getAllSnippets();
+        if (!allSnippets.length) {
+            vscode.window.showInformationMessage('No snippets found. Create snippets first.');
+            return;
+        }
+        // Get current file language
+        const currentLanguage = editor.document.languageId;
+        let filterByLanguage = true;
+        const options = [
+            { label: "$(filter) All Languages", id: "all" },
+            { label: `$(symbol-field) Only ${currentLanguage}`, id: "filtered" }
+        ];
+        const filterOption = await vscode.window.showQuickPick(options, {
+            placeHolder: 'Filter snippets?'
+        });
+        if (!filterOption)
+            return; // User cancelled
+        filterByLanguage = filterOption.id === "filtered";
+        // Then filter your snippets accordingly
+        let snippetsToShow = filterByLanguage
+            ? allSnippets.filter(s => s.language === currentLanguage)
+            : allSnippets;
+        // Create quick pick items with snippet details and icons
+        const quickPickItems = snippetsToShow.map(snippet => ({
+            label: `$(code) ${snippet.title}`,
+            description: snippet.language,
+            detail: snippet.description || 'No description',
+            snippet: snippet,
+            // Add a "matches current language" indicator
+            languageMatch: snippet.language === currentLanguage
+        }));
+        // Sort items - language matches first, then alphabetically
+        quickPickItems.sort((a, b) => {
+            if (a.languageMatch && !b.languageMatch)
+                return -1;
+            if (!a.languageMatch && b.languageMatch)
+                return 1;
+            return a.label.localeCompare(b.label);
+        });
+        // Show quick pick with snippet selection
+        const selected = await vscode.window.showQuickPick(quickPickItems, {
+            placeHolder: 'Select a snippet to insert',
+            matchOnDescription: true,
+            matchOnDetail: true
+        });
+        // Insert the selected snippet
+        if (selected && editor) {
+            editor.edit((editBuilder) => {
+                editBuilder.insert(editor.selection.active, selected.snippet.code);
+            });
+            vscode.window.showInformationMessage(`Inserted snippet: ${selected.snippet.title}`);
+        }
+    }), vscode.commands.registerCommand('devsnippet.clearTagFilter', () => {
         snippetsProvider.clearTagFilter();
         vscode.window.showInformationMessage('Cleared tag filter');
     }), vscode.commands.registerCommand('devsnippet.newSnippet', () => {

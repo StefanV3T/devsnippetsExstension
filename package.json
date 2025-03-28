@@ -37,6 +37,14 @@
     },
     "commands": [
       {
+        "command": "devsnippet.createSnippetFromSelection",
+        "title": "Create code snippet"
+      },
+      {
+        "command": "devsnippet.insertSnippetFromContext",
+        "title": "Insert code snippet"
+      },
+      {
         "command": "devsnippet.newSnippet",
         "title": "DevSnippet: Create New Snippet",
         "icon": "$(add)"
@@ -131,6 +139,16 @@
         {
           "command": "devsnippet.newSnippet",
           "group": "DevSnippet"
+        },
+        {
+          "command": "devsnippet.insertSnippetFromContext",
+          "group": "1_modification",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "devsnippet.createSnippetFromSelection",
+          "group": "1_modification",
+          "when": "editorHasSelection"
         }
       ]
     },
